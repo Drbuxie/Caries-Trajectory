@@ -1,0 +1,76 @@
+---
+title: "Dental Caries Trajectories"
+author: "Chukwuebuka Ogwo"
+date: "7/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+* Description of data:  
+  - A cohort study (subjects were recruited at birth and followed for 25 years).
+  - A high dimensional data (more than 50 relevant variables)
+  - Dental examinations were performed at age 5, 9, 13, 17 and 23. 
+  - Independent variables data were collected at every 6 months. 
+  - Almost 2000 subjects were recruited at birth but only about 336 subjects were retained after 25 years (a lot of missing data).
+  
+* Description: A trajectory analysis of dental caries over a life course using a longitudinal data.
+* Aim: To use unsupervised machine learning algorithm (KmL) to understand the changes in caries incidence from childhood to adulthood. 
+* Ultimate goal: To help cities/health departments identify high risk groups and help them streamline their interventions which will save them time and money.  
+
+```{r packages}
+library("kml3d")
+library("kml")
+library("rgl")
+library("dplyr")
+library("psych")
+library("tableone")
+require(MASS)
+```
+
+```{r dataset}
+### 1. Importing new dataset
+setwd("/Users/damia/OneDrive/Documents/PhD/Datasets")
+library(haven)
+CariesTraj <- read_sas("/Users/damia/OneDrive/Documents/PhD/Datasets/dfs_increments.sas7bdat")
+View(CariesTraj)
+head(CariesTraj)
+#CariesTraj2<- CariesTraj[c(1,2,4:6)]#
+#CariesTraj0<- na.omit(CariesTraj)#
+#CariesTraj1<- CariesTraj0[c(1,2,4:6)]#
+```
+
+## Including Plots
+```{r Longitudinal data clustering }
+### 2. Main analysis### Longitudinal clustering for Trajectory analysis
+Ebtraj<-cld(traj=CariesTraj,
+    idAll=as.character(CariesTraj$id),
+    time=c(9,13,17,23),
+    timeInData=c(2,4:6), maxNA=2)
+ kml(Ebtraj,nbClusters = 3:6, nbRedrawing=20,toPlot="both")
+```
+
+
+```{r Partition selection}
+ ### 3. Get and choose best partions
+X11()
+choice(Ebtraj, typeGraph = "png") ### To see the best partition  
+plotAllCriterion(Ebtraj)          ### To check the best's cluster numbers##
+print(Ebtraj)
+mean.trajectories <- calculTrajMean(Ebtraj["traj"], Ebtraj['c4'][[1]]['clusters'])
+print(mean.trajectories)
+```
+
+*Use case: The sudden rise and plateauing in the trajectories between age 13 and 17 suggests that btw age 13 and 17 is a high risk period.
+           Currently, the Government provides millions of dollars towards dental sealant interventions from age 6 to 19. So with the findings above,
+           they can channel their funding towards the higher risk age group (btw age 13 to 17) thereby saving them millions of dollars.    
+
+```{r Data export and merging}
+### 4. Export the clusters and create a new dataset that includes the clusters
+CariesTraj$cluster <- getClusters(Ebtraj,4)
+View (CariesTraj)
+```
+
+
